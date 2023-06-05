@@ -2,11 +2,11 @@ import {createDeviceName}   from "./deviceName.js?ver=1";
 import {getDeviceType}      from "./deviceType.js?ver=1";
 
 if (getDeviceType() === "mobile"){
-    /**
-     * ISSUE: the deviceready even on document never runs (cordova application), therefore the app function is never fired.
-     * Need to take a look at it.
-     */
     document.addEventListener("deviceready", app, false);
+    setTimeout(() => {
+        cordova.plugins.backgroundMode.enable();
+        cordova.plugins.backgroundMode.overrideBackButton();
+    }, 1000);
     app();
 }
 else {
