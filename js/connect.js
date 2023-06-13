@@ -1,5 +1,6 @@
-import {createDeviceName}   from "./deviceName.js?ver=1";
-import {getDeviceType}      from "./deviceType.js?ver=1";
+import { createDeviceName }   from "./deviceName.js?ver=1";
+import { getDeviceType }      from "./deviceType.js?ver=1";
+import { simulateDeviceMovement } from "./movementSimulation.js?ver=1";
 
 if (getDeviceType() === "mobile"){
     /**
@@ -14,22 +15,21 @@ else {
 }
 
 function app(){
+    const simulateCoordinates = true;
     const coordsElem = document.querySelector("#coordinates");
     const deviceIDElem = document.querySelector("#device-id");
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
-    
     const coordinatesList = [];
     const numberOfLastSavedCoordinates = 10; // in seconds
-    const sendCoordsToServerInterval = 0.1; // in seconds
+    const sendCoordsToServerInterval = 0.5; // in seconds
     const deviceType = getDeviceType();
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
     let locationWatcher;
-    let connected = false;
-    let fetchedLocationInit = false;
+    let initialFetching = false;
     let smoothedCoordinates = {x: 0, y: 0};
     let lastSmoothedCoordinates = {x: 0, y: 0};
     let coordinatesUpdateInterval = null;
@@ -38,7 +38,13 @@ function app(){
     createDeviceName()
     .then(data => {
         deviceName = data;
-        promptClientForLocationServices();
+        
+        if (!simulateCoordinates){
+            promptClientForLocationServices();
+        }
+        else {
+            connectToServer();
+        }
     });
     
     
@@ -75,20 +81,20 @@ function app(){
     
         /**
          * Worker has successfully connected to the server.
+         * Update UI data and start sending coordinates to the server.
          */
         if (data.type === "connectionSuccess"){
             deviceNameElem.innerHTML = `Device name:<br>${deviceName}`;
             statusElem.textContent = "Connected to the server.";
             animationPulseElem.id = "animation-pulse";
-            connected = true;
-            startCoordinatesSendInterval();
+
+            periodicUpdate();
         }
         
         /**
          * Worker failed to connect to the server.
          */
         if (data.type === "connectionError"){
-            connected = false;
             navigator.geolocation.clearWatch(locationWatcher);
     
             statusElem.textContent = data.error;
@@ -99,7 +105,6 @@ function app(){
          * Worker has experienced connection closing.
          */
         if (data.type === "connectionClosed"){
-            connected = false;
             navigator.geolocation.clearWatch(locationWatcher);
     
             Swal.fire({
@@ -133,11 +138,21 @@ function app(){
     /**
      * Periodically sends newly calculated coordinates to the server.
      * If the last coordinates is different from the current coordinates, update last coordinates to current coordinates.
+     * 
+     * Also updates displayed coordinates.
      */
-    function startCoordinatesSendInterval(){
+    function periodicUpdate(){
         coordinatesUpdateInterval = setInterval(() => {
-            if (smoothedCoordinates.x === 0 && smoothedCoordinates.y === 0) return;
-            if (JSON.stringify(smoothedCoordinates) === JSON.stringify(lastSmoothedCoordinates)) return;
+            if (!simulateCoordinates){
+                if (smoothedCoordinates.x === 0 && smoothedCoordinates.y === 0) return;
+                if (JSON.stringify(smoothedCoordinates) === JSON.stringify(lastSmoothedCoordinates)) return;
+            }
+            
+            coordsElem.textContent = `(Latitude: ${smoothedCoordinates.x}, Longitude: ${smoothedCoordinates.y})`;
+
+            if (simulateCoordinates){
+                smoothedCoordinates = simulateDeviceMovement(smoothedCoordinates);
+            }
             
             worker.postMessage({
                 type: "coordinatesUpdate",
@@ -152,7 +167,6 @@ function app(){
     
     /**
      * Runs whenever watchPosition of geolocation notices a new coordinate update.
-     * Once location information is retrieved, establish connection to the server.
      */
     function gettingLocationSuccess(position){
         const newCoordinates = {
@@ -177,21 +191,10 @@ function app(){
             x: Number(sumX / coordinatesList.length).toFixed(6),
             y: Number(sumY / coordinatesList.length).toFixed(6),
         };
-    
-        coordsElem.textContent = `(Latitude: ${smoothedCoordinates.x}, Longitude: ${smoothedCoordinates.y})`;
-    
-        if (!fetchedLocationInit){
-            fetchedLocationInit = true;
-            connected = "pending";
-    
-            worker.postMessage({
-                type: "connectToServer",
-                deviceType: deviceType,
-                coordinates: smoothedCoordinates,
-                deviceName: deviceName,
-            });
-    
-            statusElem.textContent = "Connecting to the server...";
+
+        if (!initialFetching){
+            initialFetching = true;
+            connectToServer();
         }
     }
     
@@ -218,5 +221,20 @@ function app(){
         }
     
         statusElem.textContent = errorString;
+    }
+
+
+    /**
+     * Initiates a connection to the server with initial device properties.
+     */
+    function connectToServer(){
+        worker.postMessage({
+            type: "connectToServer",
+            deviceType: deviceType,
+            coordinates: smoothedCoordinates,
+            deviceName: deviceName,
+        });
+
+        statusElem.textContent = "Connecting to the server...";
     }
 }
