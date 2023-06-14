@@ -1,6 +1,7 @@
-import { createDeviceName }   from "./deviceName.js?ver=1";
-import { getDeviceType }      from "./deviceType.js?ver=1";
-import { simulateDeviceMovement } from "./movementSimulation.js?ver=1";
+import { createDeviceName       }   from "./deviceName.js?ver=1";
+import { getDeviceType          }   from "./deviceType.js?ver=1";
+import { movingAverage          }   from "./movingAverage.js";
+import { simulateDeviceMovement }   from "./movementSimulation.js?ver=1";
 
 if (getDeviceType() === "mobile"){
     /**
@@ -22,18 +23,14 @@ function app(){
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
     const coordinatesList = [];
-    const numberOfLastSavedCoordinates = 10; // in seconds
-    const sendCoordsToServerInterval = 0.5; // in seconds
     const deviceType = getDeviceType();
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
     let locationWatcher;
     let initialFetching = false;
-    let smoothedCoordinates = {x: 0, y: 0};
-    let lastSmoothedCoordinates = {x: 0, y: 0};
-    let coordinatesUpdateInterval = null;
-    
+    let deviceCoordinates = {x: 0, y: 0};
+
     
     createDeviceName()
     .then(data => {
@@ -88,7 +85,12 @@ function app(){
             statusElem.textContent = "Connected to the server.";
             animationPulseElem.id = "animation-pulse";
 
-            periodicUpdate();
+            if (simulateCoordinates){
+                window.setInterval(() => {
+                    deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
+                    updateAndSendDeviceCoordinates();
+                }, 500);
+            }
         }
         
         /**
@@ -136,62 +138,36 @@ function app(){
     
     
     /**
-     * Periodically sends newly calculated coordinates to the server.
-     * If the last coordinates is different from the current coordinates, update last coordinates to current coordinates.
-     * 
-     * Also updates displayed coordinates.
+     * Calculates device position using move average algorithm, and then sends the position to the server.
      */
-    function periodicUpdate(){
-        coordinatesUpdateInterval = setInterval(() => {
-            if (!simulateCoordinates){
-                if (smoothedCoordinates.x === 0 && smoothedCoordinates.y === 0) return;
-                if (JSON.stringify(smoothedCoordinates) === JSON.stringify(lastSmoothedCoordinates)) return;
-            }
-            
-            coordsElem.textContent = `(Latitude: ${smoothedCoordinates.x}, Longitude: ${smoothedCoordinates.y})`;
+    function updateAndSendDeviceCoordinates(){
+        coordinatesList.push(deviceCoordinates);
+        deviceCoordinates = movingAverage(coordinatesList);
+        
+        coordsElem.textContent = `(Latitude: ${deviceCoordinates.x}, Longitude: ${deviceCoordinates.y})`;
 
-            if (simulateCoordinates){
-                smoothedCoordinates = simulateDeviceMovement(smoothedCoordinates);
-            }
-            
-            worker.postMessage({
-                type: "coordinatesUpdate",
-                coordinates: smoothedCoordinates,
-            });
-            
-            lastSmoothedCoordinates = smoothedCoordinates;
-        }, sendCoordsToServerInterval * 1000);
+        worker.postMessage({
+            type: "coordinatesUpdate",
+            coordinates: deviceCoordinates,
+        });
     }
     
     
     
     /**
-     * Runs whenever watchPosition of geolocation notices a new coordinate update.
+     * Store the newly fetched device coordinates.
      */
     function gettingLocationSuccess(position){
-        const newCoordinates = {
+        deviceCoordinates = {
             x: position.coords.latitude,
             y: position.coords.longitude,
         };
-        
-        coordinatesList.push(newCoordinates);
-    
-        if (coordinatesList.length > numberOfLastSavedCoordinates) {
-            coordinatesList.shift();
-        }
-        
-        let sumX = 0;
-        let sumY = 0;
-        for (let i = 0; i < coordinatesList.length; i++) {
-            sumX += coordinatesList[i].x;
-            sumY += coordinatesList[i].y;
-        }
-        
-        smoothedCoordinates = {
-            x: Number(sumX / coordinatesList.length).toFixed(6),
-            y: Number(sumY / coordinatesList.length).toFixed(6),
-        };
 
+        updateAndSendDeviceCoordinates();
+    
+        /**
+         * Connect to the server only after the device coordinates have been initially fetched.
+         */
         if (!initialFetching){
             initialFetching = true;
             connectToServer();
@@ -231,7 +207,7 @@ function app(){
         worker.postMessage({
             type: "connectToServer",
             deviceType: deviceType,
-            coordinates: smoothedCoordinates,
+            coordinates: deviceCoordinates,
             deviceName: deviceName,
         });
 
