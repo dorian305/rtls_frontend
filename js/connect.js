@@ -16,7 +16,7 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = true;
+    const simulateCoordinates = false;
     const coordsElem = document.querySelector("#coordinates");
     const deviceIDElem = document.querySelector("#device-id");
     const deviceNameElem = document.querySelector("#device-name");
