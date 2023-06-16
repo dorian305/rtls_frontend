@@ -16,7 +16,7 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = false;
+    const simulateCoordinates = true;
     const simulateCoordinatesInterval = 0.1;
     const wrapperElem = document.querySelector("#wrapper");
     const latitudeElem = document.querySelector("#latitude");
@@ -41,6 +41,7 @@ function app(){
         deviceName = data;
         deviceNameElem.innerHTML = deviceName;
         setTimeout(() => wrapperElem.style.visibility = "visible", 200);
+        deviceIDElem.textContent = "Waiting for server...";
         statusElem.textContent = "Locating the device...";
         
         if (!simulateCoordinates){
