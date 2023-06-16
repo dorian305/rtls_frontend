@@ -91,7 +91,7 @@ self.addEventListener("message", event => {
         // Do not send coordinates if the device's ID hasn't been established.
         // This check is because the update might get sent before the server returns the ID assigned to the device, which crashes the app.
         if (localDevice.id){
-            console.log(`Sending coordinates x: ${localDevice.coordinates.x} y: ${localDevice.coordinates.y}`);
+            // console.log(`Sending coordinates x: ${localDevice.coordinates.x} y: ${localDevice.coordinates.y}`);
             
             socket.send(JSON.stringify({
                 type: "locationUpdate",

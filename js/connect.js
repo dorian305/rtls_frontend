@@ -16,7 +16,8 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = false;
+    const simulateCoordinates = true;
+    const simulateCoordinatesInterval = 0.5;
     const coordsElem = document.querySelector("#coordinates");
     const deviceIDElem = document.querySelector("#device-id");
     const deviceNameElem = document.querySelector("#device-name");
@@ -25,22 +26,30 @@ function app(){
     const coordinatesList = [];
     const deviceType = getDeviceType();
     const worker = new Worker("js/locationUpdater.js?ver=1");
+    const coordinatesMinThreshold = 10;
     
+    let connectedToServer = false;
     let deviceName;
     let locationWatcher;
-    let initialFetching = false;
     let deviceCoordinates = {x: 0, y: 0};
 
-    
+    statusElem.textContent = "Device name required!";
     createDeviceName()
     .then(data => {
         deviceName = data;
+        statusElem.textContent = "Locating the device...";
         
         if (!simulateCoordinates){
             promptClientForLocationServices();
         }
         else {
-            connectToServer();
+            window.setInterval(() => {
+                deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
+                coordinatesList.push(deviceCoordinates);
+
+                if (!connectedToServer && coordinatesMinThresholdReached()) connectToServer();
+                if (connectedToServer) updateAndSendCoordinates();
+            }, simulateCoordinatesInterval * 1000);
         }
     });
     
@@ -84,13 +93,8 @@ function app(){
             deviceNameElem.innerHTML = `Device name:<br>${deviceName}`;
             statusElem.textContent = "Connected to the server.";
             animationPulseElem.id = "animation-pulse";
-
-            if (simulateCoordinates){
-                window.setInterval(() => {
-                    deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
-                    updateAndSendDeviceCoordinates();
-                }, 500);
-            }
+            coordsElem.textContent = `(Latitude: ${deviceCoordinates.x}, Longitude: ${deviceCoordinates.y})`;
+            connectedToServer = true;
         }
         
         /**
@@ -140,10 +144,8 @@ function app(){
     /**
      * Calculates device position using move average algorithm, and then sends the position to the server.
      */
-    function updateAndSendDeviceCoordinates(){
-        coordinatesList.push(deviceCoordinates);
+    function updateAndSendCoordinates(){
         deviceCoordinates = movingAverage(coordinatesList);
-        
         coordsElem.textContent = `(Latitude: ${deviceCoordinates.x}, Longitude: ${deviceCoordinates.y})`;
 
         worker.postMessage({
@@ -163,15 +165,10 @@ function app(){
             y: position.coords.longitude,
         };
 
-        updateAndSendDeviceCoordinates();
-    
-        /**
-         * Connect to the server only after the device coordinates have been initially fetched.
-         */
-        if (!initialFetching){
-            initialFetching = true;
-            connectToServer();
-        }
+        coordinatesList.push(deviceCoordinates);
+
+        if (!connectedToServer && coordinatesMinThresholdReached()) connectToServer();
+        if (connectedToServer) updateAndSendCoordinates();
     }
     
     
@@ -204,6 +201,8 @@ function app(){
      * Initiates a connection to the server with initial device properties.
      */
     function connectToServer(){
+        statusElem.textContent = "Connecting to the server...";
+        
         worker.postMessage({
             type: "connectToServer",
             deviceType: deviceType,
@@ -211,6 +210,13 @@ function app(){
             deviceName: deviceName,
         });
 
-        statusElem.textContent = "Connecting to the server...";
+    }
+
+    
+    /**
+     * Checks whether there are enough coordinates collected
+     */
+    function coordinatesMinThresholdReached(){
+        return coordinatesList.length >= coordinatesMinThreshold;
     }
 }

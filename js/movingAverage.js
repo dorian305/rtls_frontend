@@ -1,7 +1,5 @@
-const numberOfLastSavedCoordinates = 10;
-
 export function movingAverage(coordinatesList){
-    if (coordinatesList.length > numberOfLastSavedCoordinates){
+    if (coordinatesList.length > 10){
         coordinatesList.shift();
     }
 
