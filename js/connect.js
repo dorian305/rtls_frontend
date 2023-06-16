@@ -16,9 +16,11 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = true;
-    const simulateCoordinatesInterval = 0.5;
-    const coordsElem = document.querySelector("#coordinates");
+    const simulateCoordinates = false;
+    const simulateCoordinatesInterval = 0.1;
+    const wrapperElem = document.querySelector("#wrapper");
+    const latitudeElem = document.querySelector("#latitude");
+    const longitudeElem = document.querySelector("#longitude");
     const deviceIDElem = document.querySelector("#device-id");
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
@@ -37,6 +39,8 @@ function app(){
     createDeviceName()
     .then(data => {
         deviceName = data;
+        deviceNameElem.innerHTML = deviceName;
+        setTimeout(() => wrapperElem.style.visibility = "visible", 200);
         statusElem.textContent = "Locating the device...";
         
         if (!simulateCoordinates){
@@ -90,10 +94,9 @@ function app(){
          * Update UI data and start sending coordinates to the server.
          */
         if (data.type === "connectionSuccess"){
-            deviceNameElem.innerHTML = `Device name:<br>${deviceName}`;
-            statusElem.textContent = "Connected to the server.";
+            statusElem.textContent = "Connected, device is being tracked";
             animationPulseElem.id = "animation-pulse";
-            coordsElem.textContent = `(Latitude: ${deviceCoordinates.x}, Longitude: ${deviceCoordinates.y})`;
+            // updateCoordinatesUI();
             connectedToServer = true;
         }
         
@@ -136,7 +139,7 @@ function app(){
          * Worker has received device's ID from the server.
          */
         if (data.type === "sendingDeviceID"){
-            deviceIDElem.innerHTML = `Device id:<br>${data.deviceID}`;
+            deviceIDElem.textContent = data.deviceID;
         }
     });
     
@@ -146,7 +149,7 @@ function app(){
      */
     function updateAndSendCoordinates(){
         deviceCoordinates = movingAverage(coordinatesList);
-        coordsElem.textContent = `(Latitude: ${deviceCoordinates.x}, Longitude: ${deviceCoordinates.y})`;
+        // updateCoordinatesUI();
 
         worker.postMessage({
             type: "coordinatesUpdate",
@@ -201,7 +204,7 @@ function app(){
      * Initiates a connection to the server with initial device properties.
      */
     function connectToServer(){
-        statusElem.textContent = "Connecting to the server...";
+        statusElem.textContent = "Connecting...";
         
         worker.postMessage({
             type: "connectToServer",
@@ -219,4 +222,13 @@ function app(){
     function coordinatesMinThresholdReached(){
         return coordinatesList.length >= coordinatesMinThreshold;
     }
+
+
+    /**
+     * Update coordinates UI
+     */
+    // function updateCoordinatesUI(){
+    //     latitudeElem.textContent = `Latitude: ${deviceCoordinates.x.toFixed(6)}`;
+    //     longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
+    // }
 }

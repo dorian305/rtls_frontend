@@ -24,11 +24,20 @@
 </head>
 <body>
     <div id="wrapper">
-        <p id="device-id"></p>
-        <p id="device-name"></p>
-        <p id="connection-status"></p>
+        <p>ID:
+            <span id="device-id">-</span>
+        </p>
+        <p>NAME:
+            <span id="device-name">-</span>
+        </p>
+        <p>STATUS:
+            <span id="connection-status">-</span>
+        </p>
         <div id="animation-init"></div>
-        <p id="coordinates"></p>
+        <div id="coordinates">
+            <span id="latitude"></span>
+            <span id="longitude"></span>
+        </div>
     </div>
 
     <script src="js/connect.js?ver=1" type="module"></script>
