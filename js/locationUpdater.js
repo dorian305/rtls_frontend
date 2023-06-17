@@ -24,34 +24,41 @@ self.addEventListener("message", event => {
         localDevice.coordinates = data.coordinates;
         localDevice.name = data.deviceName;
 
+        /**
+         * Websocket connection has been established.
+         */
         socket.addEventListener('open', event => {
             socket.send(JSON.stringify({
                 type: "deviceConnected",
                 device: localDevice,
             }));
 
-            self.postMessage({type: "connectionSuccess"});
+            self.postMessage({
+                type: "connectionSuccess"
+            });
         });
 
         /**
-         * Closing the connection to the websocket server.
+         * Websocket connection has been closed.
          */
         socket.addEventListener('close', event => {
             self.postMessage({
                 type: "connectionClosed",
-                error: "Connection to the server has been lost.",
             });
         });
 
 
         /**
-         * Handle if the connection to the server fails.
+         * An error has occured during communication with the server.
+         * Notify frontend and print the error.
          */
         socket.addEventListener('error', event => {
             self.postMessage({
                 type: "connectionError",
-                error: `The connection to the server failed.`,
+                error: `An error occured while communicating with the server.`,
             });
+
+            console.log(`Websocket error: ${event}`);
         });
 
 

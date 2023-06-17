@@ -16,7 +16,7 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = true;
+    const simulateCoordinates = false;
     const simulateCoordinatesInterval = 0.1;
     const wrapperElem = document.querySelector("#wrapper");
     const latitudeElem = document.querySelector("#latitude");
@@ -28,11 +28,11 @@ function app(){
     const coordinatesList = [];
     const deviceType = getDeviceType();
     const worker = new Worker("js/locationUpdater.js?ver=1");
-    const coordinatesMinThreshold = 10;
     
-    let connectedToServer = false;
     let deviceName;
     let locationWatcher;
+    let connectedToServer = false;
+    let simulationIntervalHandler;
     let deviceCoordinates = {x: 0, y: 0};
 
     statusElem.textContent = "Device name required!";
@@ -48,12 +48,18 @@ function app(){
             promptClientForLocationServices();
         }
         else {
-            window.setInterval(() => {
+            simulationIntervalHandler = setInterval(() => {
                 deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
                 coordinatesList.push(deviceCoordinates);
 
-                if (!connectedToServer && coordinatesMinThresholdReached()) connectToServer();
-                if (connectedToServer) updateAndSendCoordinates();
+                if (connectedToServer === false && coordinatesMinThresholdReached()){
+                    connectToServer();
+                    return;
+                }
+
+                if (connectedToServer === true){
+                    updateAndSendCoordinates();
+                }
             }, simulateCoordinatesInterval * 1000);
         }
     });
@@ -76,7 +82,11 @@ function app(){
                 maximumAge: 0,
             };
     
-            locationWatcher = navigator.geolocation.watchPosition(gettingLocationSuccess, gettingLocationError, locationOptions);
+            locationWatcher = navigator.geolocation.watchPosition(
+                gettingLocationSuccess,
+                gettingLocationError,
+                locationOptions
+            );
         }
     }
     
@@ -86,40 +96,41 @@ function app(){
      */
     worker.addEventListener("message", event => {
         /**
-         * Store the received data.
+         * Store the received data from webworker.
          */
         const data = event.data;
     
         /**
-         * Worker has successfully connected to the server.
-         * Update UI data and start sending coordinates to the server.
+         * Websocket sucessfully connected to the server.
          */
         if (data.type === "connectionSuccess"){
-            statusElem.textContent = "Connected, device is being tracked";
+            statusElem.textContent = simulateCoordinates ? "Connected, simulating device coordinates..." : "Connected, device is being tracked";
             animationPulseElem.id = "animation-pulse";
-            // updateCoordinatesUI();
+            updateCoordinatesUI();
             connectedToServer = true;
         }
         
         /**
-         * Worker failed to connect to the server.
+         * Websocket has experienced an error.
          */
-        if (data.type === "connectionError"){
-            navigator.geolocation.clearWatch(locationWatcher);
-    
-            statusElem.textContent = data.error;
-        }
+        // if (data.type === "connectionError"){
+            
+        // }
     
     
         /**
-         * Worker has experienced connection closing.
+         * Websocket connection has been closed.
          */
         if (data.type === "connectionClosed"){
             navigator.geolocation.clearWatch(locationWatcher);
-    
+            clearInterval(simulationIntervalHandler);
+
+            const title = connectedToServer === true ? "Connection lost!" : "Server unavailable";
+            const description = connectedToServer === true ? "Connection to the server has been lost." : "Could not connect to the server.";
+
             Swal.fire({
-                title: "Error!",
-                text: "Connection to the server has been lost.",
+                title: title,
+                text: description,
                 icon: "error",
                 confirmButtonText: "Reload",
                 customClass: {
@@ -133,6 +144,9 @@ function app(){
                     location.reload();
                 }
             });
+
+            wrapperElem.style.visibility = "hidden";
+            connectedToServer = false;
         }
     
     
@@ -150,7 +164,7 @@ function app(){
      */
     function updateAndSendCoordinates(){
         deviceCoordinates = movingAverage(coordinatesList);
-        // updateCoordinatesUI();
+        updateCoordinatesUI();
 
         worker.postMessage({
             type: "coordinatesUpdate",
@@ -171,8 +185,13 @@ function app(){
 
         coordinatesList.push(deviceCoordinates);
 
-        if (!connectedToServer && coordinatesMinThresholdReached()) connectToServer();
-        if (connectedToServer) updateAndSendCoordinates();
+        if (connectedToServer === false && coordinatesMinThresholdReached()){
+            connectToServer();
+        }
+
+        if (connectedToServer === true){
+            updateAndSendCoordinates();
+        }
     }
     
     
@@ -206,6 +225,7 @@ function app(){
      */
     function connectToServer(){
         statusElem.textContent = "Connecting...";
+        connectedToServer = "pending";
         
         worker.postMessage({
             type: "connectToServer",
@@ -221,6 +241,7 @@ function app(){
      * Checks whether there are enough coordinates collected
      */
     function coordinatesMinThresholdReached(){
+        const coordinatesMinThreshold = 10;
         return coordinatesList.length >= coordinatesMinThreshold;
     }
 
@@ -228,8 +249,8 @@ function app(){
     /**
      * Update coordinates UI
      */
-    // function updateCoordinatesUI(){
-    //     latitudeElem.textContent = `Latitude: ${deviceCoordinates.x.toFixed(6)}`;
-    //     longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
-    // }
+    function updateCoordinatesUI(){
+        latitudeElem.textContent = `Latitude: ${deviceCoordinates.x.toFixed(6)}`;
+        longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
+    }
 }
