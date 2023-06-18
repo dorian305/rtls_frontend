@@ -91,10 +91,11 @@ self.addEventListener("message", event => {
     }
 
     /**
-     * Updating device coordinates and sending it to the server.
+     * Updating device data and sending it to the server.
      */
-    if (data.type === "coordinatesUpdate"){
+    if (data.type === "dataUpdate"){
         localDevice.coordinates = data.coordinates;
+        localDevice.battery = data.battery;
 
         // Do not send coordinates if the device's ID hasn't been established.
         // This check is because the update might get sent before the server returns the ID assigned to the device, which crashes the app.
@@ -102,7 +103,7 @@ self.addEventListener("message", event => {
             // console.log(`Sending coordinates x: ${localDevice.coordinates.x} y: ${localDevice.coordinates.y}`);
             
             socket.send(JSON.stringify({
-                type: "locationUpdate",
+                type: "dataUpdate",
                 device: localDevice,
             }));
         }

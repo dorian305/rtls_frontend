@@ -61,7 +61,7 @@ function app(){
                 }
 
                 if (connectedToServer === true){
-                    updateAndSendCoordinates();
+                    updateAndSendData();
                 }
             }, simulateCoordinatesInterval * 1000);
         }
@@ -162,15 +162,16 @@ function app(){
     
     
     /**
-     * Calculates device position using move average algorithm, and then sends the position to the server.
+     * Calculates device position using move average algorithm, and then sends the new information to the server.
      */
-    function updateAndSendCoordinates(){
+    function updateAndSendData(){
         deviceCoordinates = movingAverage(coordinatesList);
         updateUI();
 
         worker.postMessage({
-            type: "coordinatesUpdate",
+            type: "dataUpdate",
             coordinates: deviceCoordinates,
+            battery: Battery.getStatus(),
         });
     }
     
@@ -192,7 +193,7 @@ function app(){
         }
 
         if (connectedToServer === true){
-            updateAndSendCoordinates();
+            updateAndSendData();
         }
     }
     
