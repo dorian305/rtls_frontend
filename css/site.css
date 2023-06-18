@@ -28,7 +28,7 @@ p {
     padding: 10px;
 }
 
-#device-name, #device-id, #connection-status {
+#device-name, #device-id, #connection-status, #device-battery {
     margin: 2.5px;
     color: white;
     display: block;

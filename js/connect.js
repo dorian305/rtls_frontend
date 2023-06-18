@@ -2,6 +2,7 @@ import { createDeviceName       }   from "./deviceName.js?ver=1";
 import { getDeviceType          }   from "./deviceType.js?ver=1";
 import { movingAverage          }   from "./movingAverage.js";
 import { simulateDeviceMovement }   from "./movementSimulation.js?ver=1";
+import { Battery                }   from "./battery.js?ver=1";
 
 if (getDeviceType() === "mobile"){
     /**
@@ -16,12 +17,13 @@ else {
 }
 
 function app(){
-    const simulateCoordinates = false;
+    const simulateCoordinates = true;
     const simulateCoordinatesInterval = 0.1;
     const wrapperElem = document.querySelector("#wrapper");
     const latitudeElem = document.querySelector("#latitude");
     const longitudeElem = document.querySelector("#longitude");
     const deviceIDElem = document.querySelector("#device-id");
+    const deviceBatteryElem = document.querySelector("#device-battery");
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
@@ -36,6 +38,7 @@ function app(){
     let deviceCoordinates = {x: 0, y: 0};
 
     statusElem.textContent = "Device name required!";
+
     createDeviceName()
     .then(data => {
         deviceName = data;
@@ -43,6 +46,7 @@ function app(){
         setTimeout(() => wrapperElem.style.visibility = "visible", 200);
         deviceIDElem.textContent = "Waiting for server...";
         statusElem.textContent = "Locating the device...";
+        deviceBatteryElem.textContent = Battery.getStatus();
         
         if (!simulateCoordinates){
             promptClientForLocationServices();
@@ -106,7 +110,6 @@ function app(){
         if (data.type === "connectionSuccess"){
             statusElem.textContent = simulateCoordinates ? "Connected, simulating device coordinates..." : "Connected, device is being tracked";
             animationPulseElem.id = "animation-pulse";
-            updateCoordinatesUI();
             connectedToServer = true;
         }
         
@@ -164,7 +167,7 @@ function app(){
      */
     function updateAndSendCoordinates(){
         deviceCoordinates = movingAverage(coordinatesList);
-        updateCoordinatesUI();
+        updateUI();
 
         worker.postMessage({
             type: "coordinatesUpdate",
@@ -249,7 +252,8 @@ function app(){
     /**
      * Update coordinates UI
      */
-    function updateCoordinatesUI(){
+    function updateUI(){
+        deviceBatteryElem.textContent = Battery.getStatus();
         latitudeElem.textContent = `Latitude: ${deviceCoordinates.x.toFixed(6)}`;
         longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
     }
