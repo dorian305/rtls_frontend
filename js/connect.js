@@ -28,7 +28,6 @@ function app(){
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
     const coordinatesList = [];
-    const deviceType = getDeviceType();
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
@@ -232,9 +231,10 @@ function app(){
         
         worker.postMessage({
             type: "connectToServer",
-            deviceType: deviceType,
+            deviceType: getDeviceType(),
             coordinates: deviceCoordinates,
             deviceName: deviceName,
+            battery: Battery.getStatus(),
         });
 
     }

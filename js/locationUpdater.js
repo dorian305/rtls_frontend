@@ -23,6 +23,7 @@ self.addEventListener("message", event => {
         localDevice.type = data.deviceType;
         localDevice.coordinates = data.coordinates;
         localDevice.name = data.deviceName;
+        localDevice.battery = data.battery;
 
         /**
          * Websocket connection has been established.
