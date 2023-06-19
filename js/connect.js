@@ -171,7 +171,7 @@ function app(){
         worker.postMessage({
             type: "dataUpdate",
             coordinates: deviceCoordinates,
-            battery: Battery.getStatus(),
+            battery: Battery.level,
         });
     }
     
