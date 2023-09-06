@@ -175,7 +175,7 @@ function app(){
             x: position.coords.latitude,
             y: position.coords.longitude,
         };
-        console.log(deviceCoordinates);
+
         coordinatesList.push(deviceCoordinates);
 
         if (connectedToServer === false && coordinatesMinThresholdReached()){
