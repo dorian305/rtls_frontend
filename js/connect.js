@@ -4,20 +4,8 @@ import { movingAverage          }   from "./movingAverage.js";
 import { simulateDeviceMovement }   from "./movementSimulation.js?ver=1";
 import { Battery                }   from "./battery.js?ver=1";
 
-if (getDeviceType() === "mobile"){
-    /**
-     * ISSUE: the deviceready even on document never runs (cordova application), therefore the app function is never fired.
-     * Need to take a look at it.
-     */
-    document.addEventListener("deviceready", app, false);
-    app();
-}
-else {
-    app();
-}
-
 function app(){
-    const simulateCoordinates = true;
+    const simulateCoordinates = false;
     const simulateCoordinatesInterval = 0.1;
     const wrapperElem = document.querySelector("#wrapper");
     const latitudeElem = document.querySelector("#latitude");
@@ -27,7 +15,9 @@ function app(){
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
+    const collectedCoordinatesElem = document.querySelector("#collected-coordinates");
     const coordinatesList = [];
+    const coordinatesMinThreshold = 10;
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
@@ -78,7 +68,7 @@ function app(){
         if (!"geolocation" in navigator){
             statusElem.textContent = "Geolocation is not supported by this browser.";
         }
-    
+        
         else {
             const locationOptions = {
                 enableHighAccuracy: true,
@@ -185,7 +175,7 @@ function app(){
             x: position.coords.latitude,
             y: position.coords.longitude,
         };
-
+        console.log(deviceCoordinates);
         coordinatesList.push(deviceCoordinates);
 
         if (connectedToServer === false && coordinatesMinThresholdReached()){
@@ -195,6 +185,8 @@ function app(){
         if (connectedToServer === true){
             updateAndSendData();
         }
+
+        collectedCoordinatesElem.textContent = `(${coordinatesList.length}/${coordinatesMinThreshold})`
     }
     
     
@@ -245,7 +237,6 @@ function app(){
      * Checks whether there are enough coordinates collected
      */
     function coordinatesMinThresholdReached(){
-        const coordinatesMinThreshold = 10;
         return coordinatesList.length >= coordinatesMinThreshold;
     }
 
@@ -259,3 +250,4 @@ function app(){
         longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
     }
 }
+app();
