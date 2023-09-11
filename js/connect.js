@@ -32,9 +32,7 @@ function app(){
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
-    const collectedCoordinatesElem = document.querySelector("#collected-coordinates");
     const coordinatesList = [];
-    const coordinatesMinThreshold = 10;
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
@@ -75,7 +73,7 @@ function app(){
     });
     
     
-    const promptClientForLocationServices = function(){
+    function promptClientForLocationServices(){
         /**
          * Prompting the device for location services.
          * If location services are denied, displays the message to user to allow it.
@@ -195,15 +193,13 @@ function app(){
 
         coordinatesList.push(deviceCoordinates);
 
-        if (connectedToServer === false && coordinatesMinThresholdReached()){
+        if (!connectedToServer){
             connectToServer();
         }
 
-        if (connectedToServer === true){
+        if (connectedToServer){
             updateAndSendData();
         }
-
-        collectedCoordinatesElem.textContent = `(${coordinatesList.length}/${coordinatesMinThreshold})`
     }
     
     
@@ -246,18 +242,7 @@ function app(){
             deviceName: deviceName,
             battery: Battery.getStatus(),
         });
-
-        collectedCoordinatesElem.remove();
     }
-
-    
-    /**
-     * Checks whether there are enough coordinates collected
-     */
-    function coordinatesMinThresholdReached(){
-        return coordinatesList.length >= coordinatesMinThreshold;
-    }
-
 
     /**
      * Update coordinates UI
