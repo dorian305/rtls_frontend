@@ -4,6 +4,23 @@ import { movingAverage          }   from "./movingAverage.js";
 import { simulateDeviceMovement }   from "./movementSimulation.js?ver=1";
 import { Battery                }   from "./battery.js?ver=1";
 
+if (getDeviceType() === "mobile"){
+    document.addEventListener('deviceready', () => {
+        cordova.plugins.backgroundMode.enable();
+        cordova.plugins.backgroundMode.on('enable', () => {
+            cordova.plugins.backgroundMode.disableWebViewOptimizations(); 
+            cordova.plugins.backgroundMode.overrideBackButton();
+        })
+
+        // cordova.plugins.backgroundMode.on('activate', function() {
+        // });
+        app();
+    }, false);
+}
+else {
+    app();
+}
+
 function app(){
     const simulateCoordinates = false;
     const simulateCoordinatesInterval = 0.1;
@@ -230,6 +247,7 @@ function app(){
             battery: Battery.getStatus(),
         });
 
+        collectedCoordinatesElem.remove();
     }
 
     
@@ -250,4 +268,3 @@ function app(){
         longitudeElem.textContent = `Longitude: ${deviceCoordinates.y.toFixed(6)}`;
     }
 }
-app();
