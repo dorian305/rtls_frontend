@@ -60,12 +60,12 @@ function app(){
                 deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
                 coordinatesList.push(deviceCoordinates);
 
-                if (connectedToServer === false && coordinatesMinThresholdReached()){
+                if (!connectedToServer){
                     connectToServer();
                     return;
                 }
 
-                if (connectedToServer === true){
+                if (connectedToServer){
                     updateAndSendData();
                 }
             }, simulateCoordinatesInterval * 1000);
