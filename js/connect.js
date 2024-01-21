@@ -32,7 +32,9 @@ function app(){
     const deviceNameElem = document.querySelector("#device-name");
     const statusElem = document.querySelector("#connection-status");
     const animationPulseElem = document.querySelector("#animation-init");
+    const collectedCoordinatesElem = document.querySelector("#collected-coordinates");
     const coordinatesList = [];
+    const coordinatesMinThreshold = 1;
     const worker = new Worker("js/locationUpdater.js?ver=1");
     
     let deviceName;
@@ -60,7 +62,7 @@ function app(){
                 deviceCoordinates = simulateDeviceMovement(deviceCoordinates);
                 coordinatesList.push(deviceCoordinates);
 
-                if (!connectedToServer){
+                if (!connectedToServer && coordinatesMinThresholdReached()){
                     connectToServer();
                     return;
                 }
@@ -115,6 +117,7 @@ function app(){
             statusElem.textContent = simulateCoordinates ? "Connected, simulating device coordinates..." : "Connected, device is being tracked";
             animationPulseElem.id = "animation-pulse";
             connectedToServer = true;
+            collectedCoordinatesElem.remove();
         }
         
         /**
@@ -193,13 +196,16 @@ function app(){
 
         coordinatesList.push(deviceCoordinates);
 
-        if (!connectedToServer){
+        if (!connectedToServer && coordinatesMinThresholdReached()){
             connectToServer();
+            return;
         }
 
         if (connectedToServer){
             updateAndSendData();
         }
+
+        collectedCoordinatesElem.textContent = `(${coordinatesList.length}/${coordinatesMinThreshold})`;
     }
     
     
@@ -242,6 +248,10 @@ function app(){
             deviceName: deviceName,
             battery: Battery.getStatus(),
         });
+    }
+
+    function coordinatesMinThresholdReached(){
+        return coordinatesList.length >= coordinatesMinThreshold;
     }
 
     /**
